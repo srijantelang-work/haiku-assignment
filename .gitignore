@@ -1,0 +1,20 @@
+# secrets / env — never commit keys
+.env
+.env.*
+*.pem
+*.key
+
+# the assignment PDF (not part of the app; keep the public repo clean)
+take-home.pdf
+
+# deps / build
+node_modules/
+dist/
+build/
+.next/
+.vercel/
+.netlify/
+
+# OS / editor
+.DS_Store
+*.log
