@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import ProgressRail from "./components/ProgressRail";
 import QuestionRouter from "./components/QuestionRouter";
-import { createSession, exportSession, submitAnswer } from "./api";
-import type { Question } from "./types";
+import Summary from "./components/Summary";
+import { createSession, exportSummary, submitAnswer } from "./api";
+import type { Question, SummaryResponse } from "./types";
 
 type Status = "loading" | "ready" | "done" | "fatal";
 
@@ -12,7 +13,7 @@ export default function App() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<Record<string, unknown> | null>(null);
+  const [summary, setSummary] = useState<SummaryResponse | null>(null);
 
   useEffect(() => {
     createSession()
@@ -53,7 +54,7 @@ export default function App() {
     if (!sessionId) return;
     setError(null);
     try {
-      setSummary(await exportSession(sessionId));
+      setSummary(await exportSummary(sessionId));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -91,7 +92,7 @@ export default function App() {
           <h1>You're all set</h1>
           <p className="muted">Thanks — your intake is complete. We'll be in touch about next steps.</p>
           {summary ? (
-            <pre className="summary">{JSON.stringify(summary, null, 2)}</pre>
+            <Summary summary={summary} />
           ) : (
             <button className="primary" onClick={handleSummary}>
               View your summary

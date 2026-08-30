@@ -205,6 +205,111 @@ def _build_table_export(q: dict, table: dict) -> dict:
     return out
 
 
+# --- summary (presentable form of the answers) -----------------------------
+
+def build_summary(answers: dict, sex: Any) -> dict:
+    """The answers, grouped by section with human labels and formatted values.
+
+    Used by the patient-facing summary screen. `value` is a string for scalars
+    and a list of strings for multi-select / table answers; `skipped` marks a
+    field that was intentionally not asked (rendered as "Not applicable").
+    """
+    summary = {
+        "sex": "Female" if sex == "female" else ("Male" if sex == "male" else None),
+        "sections": [],
+    }
+    for section in schema.SCHEMA["sections"]:
+        items = []
+        for q in section["questions"]:
+            items.extend(_summarize_question(q, answers, sex))
+        summary["sections"].append(
+            {"id": section["id"], "title": section["title"], "items": items}
+        )
+    return summary
+
+
+def _summarize_question(q: dict, answers: dict, sex: Any) -> list:
+    key = q["key"]
+    if q.get("femaleOnly") and sex != "female":
+        return [{"label": schema.humanize(key), "value": "Not applicable", "skipped": True}]
+
+    if q["type"] == "table":
+        return [{"label": schema.humanize(key), "value": _summarize_table(q, answers.get(key, {}))}]
+
+    raw = answers.get(key)
+    if q["type"] == "multi":
+        value = list(raw) if raw else []
+    elif q["type"] == "yesno":
+        value = "Yes" if raw is True else "No"
+    else:
+        value = str(raw) if raw is not None else "Not applicable"
+
+    items = [{"label": schema.humanize(key), "value": value, "skipped": raw is None}]
+    f = q.get("followup")
+    if f:
+        fkey = f["key"]
+        fraw = answers.get(fkey)
+        if fraw is not None and fraw != "not_applicable":
+            flabel = "Side effects described" if fkey == "describe" else schema.humanize(fkey)
+            items.append({"label": flabel, "value": str(fraw)})
+    return items
+
+
+def _summarize_table(q: dict, table: dict) -> list:
+    rows = q.get("rows", [])
+    if rows and isinstance(rows[0], dict):  # habits
+        return _summarize_habits(q, table)
+    return _summarize_grid(q, table)  # products / procedures
+
+
+def _summarize_habits(q: dict, table: dict) -> list:
+    lines = []
+    for row in q["rows"]:
+        rkey = row["key"]
+        rlabel = schema.humanize(rkey)
+        if row["type"] == "single":
+            lines.append(f"{rlabel}: {table.get(rkey, '')}")
+            continue
+        rv = table.get(rkey, {})
+        val = rv.get("value", False) if isinstance(rv, dict) else False
+        text = "Yes" if val is True else "No"
+        f = row.get("followup")
+        if f and val is True:
+            fv = rv.get(f["key"])
+            if fv:
+                text += f" — {fv}"
+        lines.append(f"{rlabel}: {text}")
+    return lines
+
+
+def _summarize_grid(q: dict, table: dict) -> list:
+    columns = q["columns"]
+    gate_col = columns[0]["key"]
+    gate_word = "Used" if gate_col == "used" else "Done"
+    lines = []
+    for row_label in q["rows"]:
+        rv = table.get(row_label, {})
+        gv = rv.get(gate_col, False)
+        if gv is not True:
+            lines.append(f"{row_label}: Not {gate_word.lower()}")
+            continue
+        parts = [gate_word]
+        for col in columns[1:]:
+            ckey = col["key"]
+            cv = rv.get(ckey)
+            if ckey == "helped":
+                parts.append("Helped" if cv is True else "Didn't help")
+            elif ckey == "side_effects":
+                parts.append("Had side effects" if cv is True else "No side effects")
+            elif ckey == "sessions":
+                if cv not in (None, "not_applicable"):
+                    parts.append(f"{cv} sessions")
+            elif cv not in (None, "not_applicable"):
+                parts.append(str(cv))
+        lines.append(f"{row_label}: {' · '.join(parts)}")
+    return lines
+
+
 # --- views -----------------------------------------------------------------
 
 def question_view(step: Step, answers: dict, sex: Any) -> dict:

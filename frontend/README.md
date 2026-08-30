@@ -38,10 +38,12 @@ VITE_API_BASE=https://your-api.example npm run build
 ## Structure
 
 - `src/App.tsx` — session orchestration: `POST /session` on mount,
-  `POST /answer` on submit, done screen with `GET /export`.
-- `src/api.ts` — tiny `fetch` client for the four endpoints.
+  `POST /answer` on submit, done screen with `GET /summary`.
+- `src/api.ts` — tiny `fetch` client for the endpoints.
 - `src/components/ProgressRail.tsx` — 5 section dots + "Q N of 16".
 - `src/components/QuestionRouter.tsx` — `switch` on `type`.
+- `src/components/Summary.tsx` — presentable, section-grouped summary of the
+  completed intake (renders the `/summary` payload; skips show "Not applicable").
 - `src/components/questions/*` — one component per type, all built on a shared
   `ChoiceChip` (large thumb-reachable tap target with a check indicator).
 

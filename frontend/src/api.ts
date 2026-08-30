@@ -1,4 +1,4 @@
-import type { AnswerResponse, SessionResponse } from "./types";
+import type { AnswerResponse, SessionResponse, SummaryResponse } from "./types";
 
 // The backend (Phase 1) runs on :8000. Override with VITE_API_BASE at build
 // time for a deployed backend (CORS is already enabled server-side).
@@ -34,4 +34,8 @@ export function submitAnswer(
 
 export function exportSession(sessionId: string): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>(`/session/${sessionId}/export`);
+}
+
+export function exportSummary(sessionId: string): Promise<SummaryResponse> {
+  return request<SummaryResponse>(`/session/${sessionId}/summary`);
 }

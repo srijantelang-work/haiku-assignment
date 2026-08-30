@@ -39,3 +39,21 @@ export interface QuestionProps {
   onAnswer: (value: unknown) => void;
   submitting: boolean;
 }
+
+// Presentable summary (GET /session/{id}/summary).
+export interface SummaryItem {
+  label: string;
+  value: string | string[];
+  skipped?: boolean;
+}
+
+export interface SummarySection {
+  id: string;
+  title: string;
+  items: SummaryItem[];
+}
+
+export interface SummaryResponse {
+  sex: string | null;
+  sections: SummarySection[];
+}

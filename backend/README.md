@@ -51,6 +51,11 @@ Returns the form keyed exactly to `intake-schema.json` field names. Skipped
 fields are marked `"not_applicable"` (not omitted). Before completion it returns
 `409` with `{"complete": false, ...}`.
 
+### `GET /session/{id}/summary` — presentable summary
+Same data as `/export`, grouped by section with human labels and formatted
+values (`"Yes"`/`"No"`, `"Not applicable"` for skips, table rows flattened to
+lines). The frontend summary screen renders this directly.
+
 ## Answer shapes
 
 | type | value |

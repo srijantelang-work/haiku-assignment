@@ -128,6 +128,31 @@ def test_export_before_complete_flags_incomplete():
     assert body["progress"]["total"] == 16
 
 
+# --- summary (presentable) -------------------------------------------------
+
+def test_summary_endpoint_grouped_by_section():
+    sid, _, _ = run("female", {"q11.smoking": True})
+    r = client.get(f"/session/{sid}/summary")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["sex"] == "Female"
+    assert [s["id"] for s in body["sections"]] == ["A", "B", "C", "D", "E"]
+    habits_section = next(s for s in body["sections"] if s["id"] == "C")
+    habits = next(i for i in habits_section["items"] if i["label"] == "Habits")
+    assert isinstance(habits["value"], list)
+    assert any("Smoking: Yes" in line for line in habits["value"])
+
+
+def test_summary_marks_skipped_as_not_applicable():
+    sid, _, _ = run("male")
+    body = client.get(f"/session/{sid}/summary").json()
+    assert body["sex"] == "Male"
+    section_b = next(s for s in body["sections"] if s["id"] == "B")
+    menstrual = next(i for i in section_b["items"] if i["label"] == "Menstrual Cycle")
+    assert menstrual["value"] == "Not applicable"
+    assert menstrual["skipped"] is True
+
+
 # --- validation / state conflicts ------------------------------------------
 
 def test_invalid_option_rejected():

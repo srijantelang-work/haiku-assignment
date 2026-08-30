@@ -84,6 +84,29 @@ def export(session_id: str):
     return engine.build_export(session.answers, session.meta.get("sex"))
 
 
+@app.get("/session/{session_id}/summary")
+def summary(session_id: str):
+    """Presentable, section-grouped view of the answers (for the summary screen).
+
+    Same shape as /export but with human labels and formatted values, so the
+    frontend can render it without re-deriving labels from the schema.
+    """
+    session = _require(session_id)
+    if not session.done:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "complete": False,
+                "message": "session is not complete yet",
+                "progress": {
+                    "completed": engine.completed_count(session.answers, session.meta.get("sex")),
+                    "total": TOTAL_QUESTIONS,
+                },
+            },
+        )
+    return engine.build_summary(session.answers, session.meta.get("sex"))
+
+
 def _require(session_id: str):
     session = store.get(session_id)
     if session is None:
