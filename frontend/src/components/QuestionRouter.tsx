@@ -5,8 +5,6 @@ import YesNoQuestion from "./questions/YesNoQuestion";
 import NumberQuestion from "./questions/NumberQuestion";
 import TextQuestion from "./questions/TextQuestion";
 
-// Routes a question to its renderer by `type`. The plan's "table" branch never
-// reaches the frontend — the backend expands tables into atomic leaf steps.
 export default function QuestionRouter(props: QuestionProps) {
   switch (props.question.type) {
     case "single":

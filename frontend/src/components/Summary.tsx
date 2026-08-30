@@ -1,7 +1,5 @@
 import type { SummaryResponse } from "../types";
 
-// Presentable, section-grouped view of the completed intake (the /summary
-// endpoint already supplies human labels and formatted values).
 export default function Summary({ summary }: { summary: SummaryResponse }) {
   return (
     <div className="summary">

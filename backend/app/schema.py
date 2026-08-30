@@ -1,11 +1,4 @@
-"""Load intake-schema.json and flatten it into an ordered list of atomic steps.
-
-The schema is the single source of truth (Phase 0). This module turns it into a
-linear sequence of "steps" — one tap / number / text answer each — that the
-state machine in :mod:`engine` walks. Table questions (habits / products /
-procedures) are expanded into per-row, per-cell steps, and follow-ups become
-their own gated steps.
-"""
+"""Load intake-schema.json and flatten it into an ordered list of atomic steps."""
 from __future__ import annotations
 
 import json
@@ -13,16 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
 
-# Repo root / intake-schema.json — the canonical schema (Phase 0), read-only.
 SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "intake-schema.json"
 
-# Options that are mutually exclusive with every other option in their question.
 EXCLUSIVE_OPTIONS = {"No known family history", "None"}
 
 TOTAL_QUESTIONS = 16
 
-# Friendlier copy for the follow-up steps (the schema keys are terse). The
-# frontend renders these as an inline continuation of the triggering answer.
 FOLLOWUP_LABELS = {
     "smoking_severity": "How much do you smoke?",
     "salon_treatment_detail": "What salon treatments have you had?",
@@ -33,21 +22,20 @@ FOLLOWUP_LABELS = {
 @dataclass(frozen=True)
 class Step:
     id: str
-    kind: str                                # number|single|multi|yesno|bool|text
+    kind: str
     label: str
     section: str
-    options: Tuple[str, ...] = ()            # valid choices for single / multi
-    write: Tuple[str, ...] = ()              # path into session.answers (empty for sex)
+    options: Tuple[str, ...] = ()
+    write: Tuple[str, ...] = ()  # path into session.answers (empty for sex)
     gate: Optional[Tuple[Tuple[str, ...], bool]] = None  # (path, truthy) -> skip when unmet
     female_only: bool = False
-    section_id: str = ""                     # section letter "A".."E" ("" for the sex pre-step)
-    question_n: int = 0                      # 1-based top-level question number (0 for sex)
-    followup: bool = False                   # a continuation of the just-answered question
-    hint: str = ""                           # framing copy shown under the label
+    section_id: str = ""
+    question_n: int = 0
+    followup: bool = False
+    hint: str = ""
 
 
 def humanize(key: str) -> str:
-    """Turn a snake_case schema key into a display label (copy is Phase 2's job)."""
     return " ".join(w.capitalize() for w in key.replace("_", " ").split())
 
 
@@ -60,7 +48,6 @@ SCHEMA = load_schema()
 
 
 def top_level_questions() -> list:
-    """The 16 top-level question dicts, flattened, each tagged with its section title."""
     out = []
     for section in SCHEMA["sections"]:
         for q in section["questions"]:
@@ -73,7 +60,6 @@ def top_level_questions() -> list:
 def _build_steps() -> Tuple[list, dict]:
     steps = []
 
-    # Pre-step (not a graded schema question): learn the patient's sex for routing.
     steps.append(Step(
         id="sex", kind="single", label="Are you female or male?", section="About you",
         options=("female", "male"),
@@ -93,14 +79,13 @@ def _build_steps() -> Tuple[list, dict]:
             if qtype == "table":
                 rows = q.get("rows", [])
                 if rows and isinstance(rows[0], dict):
-                    # habits: each row is {"key", "type", [followup]}
                     for row in rows:
                         rkey = row["key"]
                         rid = f"{qid}.{rkey}"
                         if row["type"] == "single":
-                            write = ("habits", rkey)          # bare string value
+                            write = ("habits", rkey)
                         else:
-                            write = ("habits", rkey, "value")  # {"value": bool}
+                            write = ("habits", rkey, "value")
                         steps.append(Step(
                             rid, row["type"], humanize(rkey), title,
                             options=tuple(row.get("options", [])), write=write,
@@ -118,7 +103,6 @@ def _build_steps() -> Tuple[list, dict]:
                                 followup=True,
                             ))
                 else:
-                    # products / procedures: rows are display strings, columns given
                     columns = q.get("columns", [])
                     gate_col = columns[0]["key"]
                     for i, row_label in enumerate(rows):

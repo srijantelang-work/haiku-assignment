@@ -8,8 +8,10 @@ from .schema import EXCLUSIVE_OPTIONS, STEPS, STEPS_BY_ID, TOTAL_QUESTIONS, Step
 
 _INDEX = {s.id: i for i, s in enumerate(STEPS)}
 
+_STEPS_BY_N: dict = {}
+for _s in STEPS:
+    _STEPS_BY_N.setdefault(_s.question_n, []).append(_s)
 
-# --- nested answer helpers -------------------------------------------------
 
 def get_path(obj: dict, path: tuple) -> Any:
     for k in path:
@@ -24,8 +26,6 @@ def set_path(obj: dict, path: tuple, value: Any) -> None:
         obj = obj.setdefault(k, {})
     obj[path[-1]] = value
 
-
-# --- validation ------------------------------------------------------------
 
 def validate_value(step: Step, value: Any) -> None:
     kind = step.kind
@@ -56,8 +56,6 @@ def validate_value(step: Step, value: Any) -> None:
     else:
         raise ValueError(f"unknown question type '{kind}'")
 
-
-# --- skip / routing --------------------------------------------------------
 
 def is_skipped(step: Step, answers: dict, sex: Any) -> bool:
     if step.female_only and sex != "female":
@@ -94,8 +92,6 @@ def advance(session):
     session.current_step = nxt
     return question_view(STEPS_BY_ID[nxt], session.answers, session.meta.get("sex"))
 
-
-# --- progress --------------------------------------------------------------
 
 def completed_count(answers: dict, sex: Any) -> int:
     return sum(1 for q in top_level_questions() if question_complete(q, answers, sex))
@@ -148,13 +144,7 @@ def _table_complete(q: dict, answers: dict) -> bool:
     return True
 
 
-# --- export ----------------------------------------------------------------
-
 def build_export(answers: dict, sex: Any) -> dict:
-    """Final answers, keyed exactly to the schema field names.
-
-    Skipped fields are marked "not_applicable" rather than omitted.
-    """
     exp = {}
     for q in top_level_questions():
         key = q["key"]
@@ -205,15 +195,7 @@ def _build_table_export(q: dict, table: dict) -> dict:
     return out
 
 
-# --- summary (presentable form of the answers) -----------------------------
-
 def build_summary(answers: dict, sex: Any) -> dict:
-    """The answers, grouped by section with human labels and formatted values.
-
-    Used by the patient-facing summary screen. `value` is a string for scalars
-    and a list of strings for multi-select / table answers; `skipped` marks a
-    field that was intentionally not asked (rendered as "Not applicable").
-    """
     summary = {
         "sex": "Female" if sex == "female" else ("Male" if sex == "male" else None),
         "sections": [],
@@ -310,7 +292,49 @@ def _summarize_grid(q: dict, table: dict) -> list:
     return lines
 
 
-# --- views -----------------------------------------------------------------
+def build_review(answers: dict, sex: Any) -> dict:
+    sections = [{
+        "id": "about",
+        "title": "About you",
+        "items": [_review_step(STEPS_BY_ID["sex"], answers, sex)],
+    }]
+    for section in schema.SCHEMA["sections"]:
+        items = []
+        for q in section["questions"]:
+            items.extend(_review_step(s, answers, sex) for s in _STEPS_BY_N.get(q["n"], []))
+        sections.append({"id": section["id"], "title": section["title"], "items": items})
+    return {"sections": sections}
+
+
+def _review_step(step: Step, answers: dict, sex: Any) -> dict:
+    skipped = is_skipped(step, answers, sex)
+    if step.id == "sex":
+        raw = sex
+        value = "Female" if sex == "female" else ("Male" if sex == "male" else "—")
+    else:
+        raw = get_path(answers, step.write)
+        value = "Not applicable" if skipped else _display_value(step, raw)
+    item = {
+        "key": step.id,
+        "label": "Sex" if step.id == "sex" else step.label,
+        "type": step.kind,
+        "value": value,
+        "skipped": skipped,
+    }
+    if step.options:
+        item["options"] = list(step.options)
+    return item
+
+
+def _display_value(step: Step, raw: Any):
+    if raw is None:
+        return "Not applicable"
+    if step.kind in ("yesno", "bool"):
+        return "Yes" if raw else "No"
+    if step.kind == "multi":
+        return [str(x) for x in raw]
+    return str(raw)
+
 
 def question_view(step: Step, answers: dict, sex: Any) -> dict:
     view = {

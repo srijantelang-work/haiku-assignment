@@ -544,3 +544,117 @@ textarea {
 .mic-status.error {
   color: var(--danger);
 }
+
+/* --- voice prefill (Phase 6) ---------------------------------------------- */
+
+.confirm-hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.voice-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chip.prefilled,
+textarea.prefilled {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+
+/* --- review screen (Phase 7) ---------------------------------------------- */
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.review-toggle {
+  align-self: flex-start;
+  padding: 6px 0;
+}
+
+.review-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.review-section-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.review-item {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.review-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.review-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.review-value {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.review-item.skipped .review-value {
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.review-edit {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.review-json {
+  margin: 0;
+  padding: 14px;
+  background: #faf9f7;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow: auto;
+  max-height: 52vh;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

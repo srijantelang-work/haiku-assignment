@@ -8,13 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from . import engine, stt, store
+from . import cerebras, engine, stt, store
 from .schema import STEPS_BY_ID, TOTAL_QUESTIONS
 
 app = FastAPI(title="Haiku Studio Intake — State Machine API", version="0.1.0")
 
-# The React shell (Phase 2+) runs on a different origin during dev (Vite :5173).
-# Allow all origins for now; tighten to the deployed frontend origin in Phase 4.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,6 +22,16 @@ app.add_middleware(
 
 
 class AnswerRequest(BaseModel):
+    key: str
+    value: Any
+
+
+class StructureRequest(BaseModel):
+    key: str
+    transcript: str
+
+
+class EditRequest(BaseModel):
     key: str
     value: Any
 
@@ -66,14 +74,29 @@ def answer(session_id: str, req: AnswerRequest) -> dict:
     }
 
 
+@app.post("/session/{session_id}/structure")
+async def structure(session_id: str, req: StructureRequest) -> dict:
+    _require(session_id)
+    step = STEPS_BY_ID.get(req.key)
+    if step is None:
+        raise HTTPException(status_code=422, detail=f"unknown question key '{req.key}'")
+    try:
+        result = await cerebras.structure_transcript(
+            step.kind, list(step.options), step.label, req.transcript
+        )
+    except cerebras.StructuringError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    value, uncertain = result["value"], result["uncertain"]
+    if not uncertain and value is not None:
+        try:
+            engine.validate_value(step, value)
+        except ValueError:
+            value, uncertain = None, True
+    return {"key": req.key, "value": value, "uncertain": uncertain}
+
+
 @app.post("/transcribe")
 async def transcribe(request: Request) -> dict:
-    """Speech-to-text for the frontend's press-to-talk mic.
-
-    Reads the raw audio bytes directly from the body (no multipart parser, so
-    the deployment doesn't need python-multipart). The API key is handled only
-    here in `stt`, never in the browser.
-    """
     audio = await request.body()
     content_type = request.headers.get("content-type", "audio/webm")
     if not audio:
@@ -105,11 +128,6 @@ def export(session_id: str):
 
 @app.get("/session/{session_id}/summary")
 def summary(session_id: str):
-    """Presentable, section-grouped view of the answers (for the summary screen).
-
-    Same shape as /export but with human labels and formatted values, so the
-    frontend can render it without re-deriving labels from the schema.
-    """
     session = _require(session_id)
     if not session.done:
         return JSONResponse(
@@ -124,6 +142,40 @@ def summary(session_id: str):
             },
         )
     return engine.build_summary(session.answers, session.meta.get("sex"))
+
+
+@app.get("/session/{session_id}/review")
+def review(session_id: str) -> dict:
+    session = _require(session_id)
+    return _review_payload(session)
+
+
+@app.post("/session/{session_id}/edit")
+def edit(session_id: str, req: EditRequest) -> dict:
+    session = _require(session_id)
+    step = STEPS_BY_ID.get(req.key)
+    if step is None:
+        raise HTTPException(status_code=422, detail=f"unknown question key '{req.key}'")
+    try:
+        engine.apply_answer(session, step, req.value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return _review_payload(session)
+
+
+@app.post("/session/{session_id}/submit")
+def submit(session_id: str) -> dict:
+    session = _require(session_id)
+    if not session.done:
+        raise HTTPException(status_code=409, detail="session is not complete")
+    session.meta["submitted"] = True
+    return {"submitted": True}
+
+
+def _review_payload(session) -> dict:
+    payload = engine.build_review(session.answers, session.meta.get("sex"))
+    payload["export"] = engine.build_export(session.answers, session.meta.get("sex"))
+    return payload
 
 
 def _require(session_id: str):

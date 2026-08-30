@@ -1,7 +1,11 @@
-import type { AnswerResponse, SessionResponse, SummaryResponse } from "./types";
+import type {
+  AnswerResponse,
+  ReviewResponse,
+  SessionResponse,
+  StructureResult,
+  SummaryResponse,
+} from "./types";
 
-// The backend (Phase 1) runs on :8000. Override with VITE_API_BASE at build
-// time for a deployed backend (CORS is already enabled server-side).
 const BASE: string = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -40,8 +44,38 @@ export function exportSummary(sessionId: string): Promise<SummaryResponse> {
   return request<SummaryResponse>(`/session/${sessionId}/summary`);
 }
 
-// Speech-to-text (Phase 5). Posts the raw audio blob to the backend, which is
-// the only place that holds the ElevenLabs key — it never touches the browser.
+export function structure(
+  sessionId: string,
+  key: string,
+  transcript: string
+): Promise<StructureResult> {
+  return request<StructureResult>(`/session/${sessionId}/structure`, {
+    method: "POST",
+    body: JSON.stringify({ key, transcript }),
+  });
+}
+
+export function getReview(sessionId: string): Promise<ReviewResponse> {
+  return request<ReviewResponse>(`/session/${sessionId}/review`);
+}
+
+export function editSession(
+  sessionId: string,
+  key: string,
+  value: unknown
+): Promise<ReviewResponse> {
+  return request<ReviewResponse>(`/session/${sessionId}/edit`, {
+    method: "POST",
+    body: JSON.stringify({ key, value }),
+  });
+}
+
+export function submitSession(sessionId: string): Promise<{ submitted: boolean }> {
+  return request<{ submitted: boolean }>(`/session/${sessionId}/submit`, {
+    method: "POST",
+  });
+}
+
 export async function transcribe(audio: Blob): Promise<string> {
   const res = await fetch(`${BASE}/transcribe`, {
     method: "POST",

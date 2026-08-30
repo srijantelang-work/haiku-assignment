@@ -1,11 +1,3 @@
-// Shapes returned by the Phase-1 backend (see backend/README.md).
-//
-// Note on "table": the Phase-2 plan lists "table" as a router branch, but the
-// backend expands every table question (habits / products / procedures) into
-// atomic per-cell steps *before* it reaches the frontend. So the router only
-// ever sees the leaf types below (single / multi / yesno / bool / number /
-// text) — the "table" branch is handled server-side.
-
 export type QuestionType = "single" | "multi" | "yesno" | "bool" | "number" | "text";
 
 export interface Question {
@@ -13,10 +5,10 @@ export interface Question {
   type: QuestionType;
   label: string;
   section: string;
-  section_id: string; // "A".."E" ("" for the sex pre-step)
-  question_n: number; // 1-based top-level question number (0 for the sex pre-step)
-  followup: boolean; // continuation of the just-answered question (inline, not numbered)
-  hint?: string; // framing copy shown under the label
+  section_id: string;
+  question_n: number;
+  followup: boolean;
+  hint?: string;
   options?: string[];
   progress: { completed: number; total: number };
 }
@@ -33,14 +25,39 @@ export interface AnswerResponse {
   done: boolean;
 }
 
-// Props every question component shares.
+export interface StructureResult {
+  key: string;
+  value: unknown;
+  uncertain: boolean;
+}
+
+export interface ReviewItem {
+  key: string;
+  label: string;
+  type: QuestionType;
+  options?: string[];
+  value: string | string[];
+  skipped: boolean;
+}
+
+export interface ReviewSection {
+  id: string;
+  title: string;
+  items: ReviewItem[];
+}
+
+export interface ReviewResponse {
+  sections: ReviewSection[];
+  export: Record<string, unknown>;
+}
+
 export interface QuestionProps {
   question: Question;
   onAnswer: (value: unknown) => void;
   submitting: boolean;
+  structureTranscript: (key: string, transcript: string) => Promise<StructureResult>;
 }
 
-// Presentable summary (GET /session/{id}/summary).
 export interface SummaryItem {
   label: string;
   value: string | string[];
