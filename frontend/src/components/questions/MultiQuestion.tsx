@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { QuestionProps } from "../../types";
+import ChoiceChip from "./ChoiceChip";
 
+// Multi-active chips with an explicit "Continue" — multiple taps are expected,
+// so it must never auto-advance on a single tap.
 export default function MultiQuestion({ question, onAnswer, submitting }: QuestionProps) {
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -13,14 +16,13 @@ export default function MultiQuestion({ question, onAnswer, submitting }: Questi
     <div className="stack">
       <div className="options">
         {(question.options ?? []).map((opt) => (
-          <button
+          <ChoiceChip
             key={opt}
-            className={`option ${selected.includes(opt) ? "selected" : ""}`}
+            label={opt}
+            selected={selected.includes(opt)}
             disabled={submitting}
             onClick={() => toggle(opt)}
-          >
-            {opt}
-          </button>
+          />
         ))}
       </div>
       <button
@@ -28,7 +30,7 @@ export default function MultiQuestion({ question, onAnswer, submitting }: Questi
         disabled={selected.length === 0 || submitting}
         onClick={() => onAnswer(selected)}
       >
-        Continue
+        {selected.length > 0 ? `Continue · ${selected.length} selected` : "Continue"}
       </button>
     </div>
   );

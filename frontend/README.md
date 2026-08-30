@@ -42,7 +42,19 @@ VITE_API_BASE=https://your-api.example npm run build
 - `src/api.ts` — tiny `fetch` client for the four endpoints.
 - `src/components/ProgressRail.tsx` — 5 section dots + "Q N of 16".
 - `src/components/QuestionRouter.tsx` — `switch` on `type`.
-- `src/components/questions/*` — one component per type.
+- `src/components/questions/*` — one component per type, all built on a shared
+  `ChoiceChip` (large thumb-reachable tap target with a check indicator).
+
+## Interaction model
+
+- **Single / YesNo** auto-advance on tap — the chosen chip flashes its selected
+  state for ~200ms, then submits (no "next" click). Double-taps are guarded.
+- **Multi** is chip-toggling with an explicit **Continue** (never auto-advances).
+- **Number** (`inputMode="numeric"`, big centered field) enforces 1–100, matching
+  the backend validator.
+- Table questions (habits / products / procedures) are already expanded into
+  per-row atomic steps by the backend, so they feel like a sequence of single
+  questions, not a data-grid.
 
 ## Back button
 
@@ -57,9 +69,17 @@ npm run typecheck    # tsc --noEmit
 npm run build        # production build → dist/
 ```
 
-## Test (Phase 2 acceptance)
+## Test
 
 Open `http://localhost:5173`, click through all 16 questions with dummy inputs.
 You should land on the "You're all set" screen without crashing, and the rail
 should read "Q16 of 16" with section E lit. For a **male** patient the rail must
 jump from Q5 to Q8 (skipping Q6/Q7) — never counting backward.
+
+Phase-3 checks (Chrome device toolbar, phone width):
+
+- Every chip is ≥ 56px tall and thumb-reachable; single/yesno advance on one tap.
+- Multi-select does **not** advance until "Continue" is tapped.
+- Q11–Q13 produce the correct nested export shape (row → columns), matching
+  `intake-schema.json` — e.g. `products["OTC/Medicated Shampoos"]` → `{used,
+  duration, helped, side_effects}`.

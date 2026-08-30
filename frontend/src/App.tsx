@@ -111,7 +111,7 @@ export default function App() {
       <div className="card">
         <ProgressRail question={question} />
         {question && (
-          <div className="body">
+          <div className="body" key={question.step}>
             <p className="section-label">{question.section}</p>
             <h2 className="question-label">{question.label}</h2>
             <QuestionRouter question={question} onAnswer={handleAnswer} submitting={submitting} />
