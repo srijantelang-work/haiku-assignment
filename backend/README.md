@@ -29,7 +29,10 @@ curl -s -X POST localhost:8000/session
 
 Each question also carries `section_id` (`"A"`–`"E"`) and `question_n` (1–16) so
 the frontend progress rail can show section dots and "Q N of 16" without parsing
-step ids. CORS is open (`allow_origins=["*"]`) so the React shell can call from
+step ids. Follow-up steps (smoking severity, salon detail, Q14 "describe") are
+marked `"followup": true` and get friendlier copy; the sex pre-step carries a
+`hint` ("So we can skip what doesn't apply to you.") the frontend shows as a
+subtitle. CORS is open (`allow_origins=["*"]`) so the React shell can call from
 its own dev origin.
 
 ### `GET /session/{id}` — current state

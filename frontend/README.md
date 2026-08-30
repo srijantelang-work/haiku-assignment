@@ -55,6 +55,10 @@ VITE_API_BASE=https://your-api.example npm run build
 - Table questions (habits / products / procedures) are already expanded into
   per-row atomic steps by the backend, so they feel like a sequence of single
   questions, not a data-grid.
+- **Conditional logic** lives in the backend (Phase 1). The UI just surfaces it:
+  the sex tap is framed "So we can skip what doesn't apply to you", and
+  follow-ups (smoking → severity, salon → detail, Q14 → describe) render with a
+  "Follow-up" pill as an inline continuation — the rail number does not move.
 
 ## Back button
 

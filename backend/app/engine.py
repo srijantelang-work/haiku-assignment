@@ -215,7 +215,10 @@ def question_view(step: Step, answers: dict, sex: Any) -> dict:
         "section": step.section,
         "section_id": step.section_id,
         "question_n": step.question_n,
+        "followup": step.followup,
     }
+    if step.hint:
+        view["hint"] = step.hint
     if step.options:
         view["options"] = list(step.options)
     view["progress"] = {"completed": completed_count(answers, sex), "total": TOTAL_QUESTIONS}

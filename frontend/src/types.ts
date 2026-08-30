@@ -15,6 +15,8 @@ export interface Question {
   section: string;
   section_id: string; // "A".."E" ("" for the sex pre-step)
   question_n: number; // 1-based top-level question number (0 for the sex pre-step)
+  followup: boolean; // continuation of the just-answered question (inline, not numbered)
+  hint?: string; // framing copy shown under the label
   options?: string[];
   progress: { completed: number; total: number };
 }

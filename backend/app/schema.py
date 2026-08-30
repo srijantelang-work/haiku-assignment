@@ -21,6 +21,14 @@ EXCLUSIVE_OPTIONS = {"No known family history", "None"}
 
 TOTAL_QUESTIONS = 16
 
+# Friendlier copy for the follow-up steps (the schema keys are terse). The
+# frontend renders these as an inline continuation of the triggering answer.
+FOLLOWUP_LABELS = {
+    "smoking_severity": "How much do you smoke?",
+    "salon_treatment_detail": "What salon treatments have you had?",
+    "describe": "What side effects did you notice?",
+}
+
 
 @dataclass(frozen=True)
 class Step:
@@ -34,6 +42,8 @@ class Step:
     female_only: bool = False
     section_id: str = ""                     # section letter "A".."E" ("" for the sex pre-step)
     question_n: int = 0                      # 1-based top-level question number (0 for sex)
+    followup: bool = False                   # a continuation of the just-answered question
+    hint: str = ""                           # framing copy shown under the label
 
 
 def humanize(key: str) -> str:
@@ -65,8 +75,9 @@ def _build_steps() -> Tuple[list, dict]:
 
     # Pre-step (not a graded schema question): learn the patient's sex for routing.
     steps.append(Step(
-        id="sex", kind="single", label="Sex", section="About you",
+        id="sex", kind="single", label="Are you female or male?", section="About you",
         options=("female", "male"),
+        hint="So we can skip what doesn't apply to you.",
     ))
 
     for section in SCHEMA["sections"]:
@@ -99,11 +110,12 @@ def _build_steps() -> Tuple[list, dict]:
                         if f:
                             fkey = f["key"]
                             steps.append(Step(
-                                f"{rid}.{fkey}", f["type"], humanize(fkey), title,
+                                f"{rid}.{fkey}", f["type"], FOLLOWUP_LABELS.get(fkey, humanize(fkey)), title,
                                 options=tuple(f.get("options", [])),
                                 write=("habits", rkey, fkey),
                                 gate=(("habits", rkey, "value"), True),
                                 section_id=section_id, question_n=question_n,
+                                followup=True,
                             ))
                 else:
                     # products / procedures: rows are display strings, columns given
@@ -137,9 +149,10 @@ def _build_steps() -> Tuple[list, dict]:
                 if f:
                     fkey = f["key"]
                     steps.append(Step(
-                        f"{qid}.{fkey}", f["type"], humanize(fkey), title,
+                        f"{qid}.{fkey}", f["type"], FOLLOWUP_LABELS.get(fkey, humanize(fkey)), title,
                         write=(fkey,), gate=((key,), True),
                         section_id=section_id, question_n=question_n,
+                        followup=True,
                     ))
 
     return steps, {s.id: s for s in steps}
