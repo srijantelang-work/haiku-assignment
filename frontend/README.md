@@ -49,6 +49,9 @@ VITE_API_BASE=https://your-api.example npm run build
 - `src/components/MicButton.tsx` — press-to-talk voice input (Phase 5). Records
   while held, POSTs the clip to the backend `/transcribe` endpoint on release,
   and hands the transcript back. The ElevenLabs key never reaches the browser.
+- `src/audio.ts` — re-encodes the browser's recorded container (WebM/Opus, Ogg,
+  MP4/AAC) to mono 16-bit PCM WAV via the Web Audio API, since strict STT
+  services reject Chrome's MediaRecorder WebM/Opus as "corrupted".
 
 ## Interaction model
 
@@ -64,11 +67,13 @@ VITE_API_BASE=https://your-api.example npm run build
   the sex tap is framed "So we can skip what doesn't apply to you", and
   follow-ups (smoking → severity, salon → detail, Q14 → describe) render with a
   "Follow-up" pill as an inline continuation — the rail number does not move.
-- **Voice (Phase 5)** is press-to-talk: hold the mic, speak, release. On the
-  free-text questions the transcript drops into the textarea for review; on
-  tap questions an "or just say your answer" row matches the spoken option to a
-  chip (yes/no, single, multi). Silence and service errors surface inline with
-  a retry — no hard crash. The mic hides itself on browsers without
+- **Voice (Phase 5)** is press-to-talk: hold the mic, speak, release. The clip
+  is transcoded to WAV client-side, then sent to the backend `/transcribe`
+  (which holds the ElevenLabs key). On the free-text questions the transcript
+  drops into the textarea for review; on tap questions an "or just say your
+  answer" row matches the spoken option to a chip (yes/no, single, multi).
+  Too-short and silent clips are caught locally; service errors surface inline
+  with a retry — no hard crash. The mic hides itself on browsers without
   `getUserMedia`/`MediaRecorder`, and needs HTTPS on non-localhost origins.
 
 ## Back button

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { transcribe } from "../api";
+import { MIN_DURATION, toWav } from "../audio";
 
 // Press-to-talk speech input. Records while the button is held, sends the clip
 // to the backend /transcribe endpoint on release, and hands the transcript to
@@ -63,7 +64,26 @@ export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
   const deliver = async (blob: Blob) => {
     setPhase("transcribing");
     try {
-      const text = await transcribe(blob);
+      // Re-encode the browser's WebM/Opus (or MP4/AAC) container to PCM WAV —
+      // Scribe rejects Chrome's MediaRecorder output as "corrupted" otherwise.
+      let toSend = blob;
+      try {
+        const clip = await toWav(blob);
+        if (clip.duration < MIN_DURATION) {
+          setPhase("error");
+          setError("That clip was too short — hold the mic and speak a little longer.");
+          return;
+        }
+        if (!clip.loud) {
+          setPhase("error");
+          setError("Didn't hear anything — try again a bit louder.");
+          return;
+        }
+        toSend = clip.wav;
+      } catch {
+        toSend = blob; // decode failed — fall back to the original container
+      }
+      const text = await transcribe(toSend);
       setPhase("idle");
       setError(null);
       onTranscript(text);
