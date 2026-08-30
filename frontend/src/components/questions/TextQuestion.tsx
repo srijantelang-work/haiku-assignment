@@ -2,20 +2,46 @@ import { useState } from "react";
 import type { QuestionProps } from "../../types";
 import MicButton from "../MicButton";
 
-// Free-text (Q11 salon detail, Q14 side effects). The mic is the fast path:
-// hold and speak, and the transcript drops into the textarea for review/edit.
-export default function TextQuestion({ onAnswer, submitting }: QuestionProps) {
+export default function TextQuestion({ question, onAnswer, submitting, structureTranscript }: QuestionProps) {
   const [value, setValue] = useState("");
+  const [prefilled, setPrefilled] = useState(false);
+  const [structuring, setStructuring] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+
+  const onTranscript = async (text: string) => {
+    setStructuring(true);
+    setVoiceError(null);
+    try {
+      const r = await structureTranscript(question.step, text);
+      const cleaned = (r && typeof r.value === "string" && r.value.trim()) ? r.value.trim() : text.trim();
+      setValue(cleaned);
+      setPrefilled(true);
+    } catch {
+      setValue(text.trim());
+      setPrefilled(true);
+    } finally {
+      setStructuring(false);
+    }
+  };
 
   return (
     <div className="text">
       <textarea
         rows={4}
+        className={prefilled ? "prefilled" : ""}
         placeholder="Type here, or hold the mic and say it"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setPrefilled(false);
+        }}
       />
-      <MicButton onTranscript={(t) => setValue(t)} disabled={submitting} />
+      {prefilled && (
+        <p className="confirm-hint">Auto-filled — review and tap Continue.</p>
+      )}
+      <MicButton onTranscript={onTranscript} disabled={submitting || structuring} />
+      {structuring && <span className="voice-status">Formatting your answer…</span>}
+      {voiceError && <span className="voice-error">{voiceError}</span>}
       <button
         className="primary"
         disabled={!value.trim() || submitting}

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { QuestionProps } from "../../types";
 
-// Bounds match the backend validator (1–100), which is the source of truth.
 const MIN = 1;
 const MAX = 100;
 

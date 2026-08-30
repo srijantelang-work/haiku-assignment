@@ -6,12 +6,12 @@ import { matchOption } from "../../voice";
 
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
-// Auto-advances on tap: the chosen chip flashes its selected state for a beat
-// (~200ms) so the user sees what they tapped, then submits — no "next" click.
-// The mic is a secondary input: say the option and it taps it for you.
-export default function SingleQuestion({ question, onAnswer, submitting }: QuestionProps) {
+export default function SingleQuestion({ question, onAnswer, submitting, structureTranscript }: QuestionProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
+  const [structuring, setStructuring] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const locked = useRef(false);
   const timer = useRef<number | null>(null);
 
   useEffect(
@@ -22,18 +22,35 @@ export default function SingleQuestion({ question, onAnswer, submitting }: Quest
   );
 
   const choose = (opt: string) => {
-    if (selected !== null || submitting) return;
+    if (locked.current || submitting) return;
     setSelected(opt);
+    setPrefilled(false);
+    locked.current = true;
     timer.current = window.setTimeout(() => onAnswer(opt), 200);
   };
 
-  const onTranscript = (text: string) => {
-    const opt = matchOption(text, question.options ?? []);
-    if (opt) {
-      setVoiceError(null);
-      choose(opt);
-    } else {
-      setVoiceError("Didn't catch that — tap an option instead.");
+  const onTranscript = async (text: string) => {
+    setStructuring(true);
+    setVoiceError(null);
+    try {
+      const r = await structureTranscript(question.step, text);
+      const matched = (!r.uncertain && typeof r.value === "string") ? r.value : matchOption(text, question.options ?? []);
+      if (matched) {
+        setSelected(matched);
+        setPrefilled(true);
+      } else {
+        setVoiceError(`Didn't catch that — heard "${text}". Tap an option instead.`);
+      }
+    } catch {
+      const fallback = matchOption(text, question.options ?? []);
+      if (fallback) {
+        setSelected(fallback);
+        setPrefilled(true);
+      } else {
+        setVoiceError(`Didn't catch that — heard "${text}". Tap an option instead.`);
+      }
+    } finally {
+      setStructuring(false);
     }
   };
 
@@ -45,15 +62,20 @@ export default function SingleQuestion({ question, onAnswer, submitting }: Quest
             key={opt}
             label={cap(opt)}
             selected={selected === opt}
+            prefilled={prefilled && selected === opt}
             disabled={submitting}
             onClick={() => choose(opt)}
           />
         ))}
       </div>
+      {prefilled && (
+        <p className="confirm-hint">Auto-filled — tap to confirm, or pick another option.</p>
+      )}
       {voiceSupported && (
         <div className="voice-row">
           <span className="voice-hint">Or just say your answer</span>
-          <MicButton onTranscript={onTranscript} disabled={submitting} />
+          <MicButton onTranscript={onTranscript} disabled={submitting || structuring} />
+          {structuring && <span className="voice-status">Matching your answer…</span>}
           {voiceError && <span className="voice-error">{voiceError}</span>}
         </div>
       )}
