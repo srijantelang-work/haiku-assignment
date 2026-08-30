@@ -1,11 +1,7 @@
 import { useRef, useState } from "react";
 import { transcribe } from "../api";
-import { MIN_DURATION, toWav } from "../audio";
-
-// Press-to-talk speech input. Records while the button is held, sends the clip
-// to the backend /transcribe endpoint on release, and hands the transcript to
-// the parent via onTranscript. Silence and service errors fail visibly with a
-// retry affordance (just press again) — never a hard crash.
+import { MIN_DURATION, startCapture } from "../audio";
+import type { RecordingHandle } from "../audio";
 
 interface MicButtonProps {
   onTranscript: (text: string) => void;
@@ -17,19 +13,7 @@ type Phase = "idle" | "listening" | "transcribing" | "error";
 export const voiceSupported =
   typeof navigator !== "undefined" &&
   !!navigator.mediaDevices?.getUserMedia &&
-  typeof MediaRecorder !== "undefined";
-
-function pickMimeType(): string | undefined {
-  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
-  for (const c of candidates) {
-    try {
-      if (MediaRecorder.isTypeSupported(c)) return c;
-    } catch {
-      /* some browsers throw on unknown types — fall through */
-    }
-  }
-  return undefined;
-}
+  typeof AudioContext !== "undefined";
 
 function MicIcon() {
   return (
@@ -49,41 +33,31 @@ function MicIcon() {
 export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const handleRef = useRef<RecordingHandle | null>(null);
   const wantStopRef = useRef(false);
 
-  if (!voiceSupported) return null; // hide the mic where mic/recording isn't available
+  if (!voiceSupported) return null;
 
   const cleanupStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   };
 
-  const deliver = async (blob: Blob) => {
+  const deliver = async (clip: { wav: Blob; duration: number; loud: boolean }) => {
     setPhase("transcribing");
     try {
-      // Re-encode the browser's WebM/Opus (or MP4/AAC) container to PCM WAV —
-      // Scribe rejects Chrome's MediaRecorder output as "corrupted" otherwise.
-      let toSend = blob;
-      try {
-        const clip = await toWav(blob);
-        if (clip.duration < MIN_DURATION) {
-          setPhase("error");
-          setError("That clip was too short — hold the mic and speak a little longer.");
-          return;
-        }
-        if (!clip.loud) {
-          setPhase("error");
-          setError("Didn't hear anything — try again a bit louder.");
-          return;
-        }
-        toSend = clip.wav;
-      } catch {
-        toSend = blob; // decode failed — fall back to the original container
+      if (clip.duration < MIN_DURATION) {
+        setPhase("error");
+        setError("That clip was too short — hold the mic and speak a little longer.");
+        return;
       }
-      const text = await transcribe(toSend);
+      if (!clip.loud) {
+        setPhase("error");
+        setError("Didn't hear anything — try again a bit louder.");
+        return;
+      }
+      const text = await transcribe(clip.wav);
       setPhase("idle");
       setError(null);
       onTranscript(text);
@@ -100,29 +74,8 @@ export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const mimeType = pickMimeType();
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      recorder.onstop = () => {
-        cleanupStream();
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-        recorderRef.current = null;
-        if (blob.size === 0) {
-          setPhase("error");
-          setError("No audio captured — hold the mic and speak, then release.");
-          return;
-        }
-        void deliver(blob);
-      };
-      recorder.start();
-      recorderRef.current = recorder;
+      handleRef.current = startCapture(stream);
       setPhase("listening");
-      // Released before the mic finished opening (a very quick tap) — stop now.
       if (wantStopRef.current) stop();
     } catch {
       setPhase("error");
@@ -131,11 +84,13 @@ export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
   };
 
   const stop = () => {
-    const rec = recorderRef.current;
-    if (rec && rec.state !== "inactive") {
-      rec.stop();
-    } else if (rec === null) {
-      // getUserMedia hasn't resolved yet — remember to stop once it has.
+    const handle = handleRef.current;
+    if (handle) {
+      handleRef.current = null;
+      const clip = handle.stop();
+      cleanupStream();
+      void deliver(clip);
+    } else {
       wantStopRef.current = true;
     }
   };
@@ -145,7 +100,7 @@ export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      /* noop — capture is a nicety, not required */
+      /* noop */
     }
     void start();
   };

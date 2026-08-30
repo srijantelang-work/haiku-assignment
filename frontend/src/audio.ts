@@ -1,81 +1,94 @@
-// Re-encode browser-recorded audio as a clean 16-bit PCM WAV before upload.
-//
-// The browser's MediaRecorder emits WebM/Opus (Chrome), Ogg (Firefox), or
-// MP4/AAC (Safari). Those containers are fine for playback, but strict STT
-// services (ElevenLabs Scribe included) sometimes reject Chrome's WebM/Opus as
-// "corrupted / not playable". Decoding with the Web Audio API and re-encoding
-// to mono PCM WAV sidesteps that entirely — WAV is accepted everywhere.
+export const MIN_DURATION = 0.4;
+const LOUDNESS_THRESHOLD = 0.01;
+const BUFFER_SIZE = 4096;
 
-export const MIN_DURATION = 0.4; // seconds — reject near-instant taps
-const LOUDNESS_THRESHOLD = 0.01; // RMS below this counts as silence
+export interface RecordingHandle {
+  stop: () => RecordedClip;
+}
 
-export interface DecodedClip {
+export interface RecordedClip {
   wav: Blob;
   duration: number;
   loud: boolean;
 }
 
-/** Decode a recorded blob and re-encode it as mono 16-bit PCM WAV. */
-export async function toWav(blob: Blob): Promise<DecodedClip> {
-  const arrayBuffer = await blob.arrayBuffer();
-  const Ctx =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  const ctx = new Ctx();
-  try {
-    const buffer = await ctx.decodeAudioData(arrayBuffer);
-    const { wav, loud } = encodeWav(buffer);
-    return { wav, duration: buffer.duration, loud };
-  } finally {
+export function startCapture(stream: MediaStream): RecordingHandle {
+  const ctx = new (window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext })
+      .webkitAudioContext)();
+
+  const source = ctx.createMediaStreamSource(stream);
+  const processor = ctx.createScriptProcessor(BUFFER_SIZE, 1, 1);
+  const chunks: Float32Array[] = [];
+
+  processor.onaudioprocess = (e: AudioProcessingEvent) => {
+    chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  };
+
+  source.connect(processor);
+  processor.connect(ctx.destination);
+
+  const stop = (): RecordedClip => {
+    processor.disconnect();
+    source.disconnect();
     void ctx.close().catch(() => {});
-  }
+
+    const totalLength = chunks.reduce((n, c) => n + c.length, 0);
+    const samples = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      samples.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    const sampleRate = ctx.sampleRate;
+    const duration = totalLength / sampleRate;
+
+    let sumSq = 0;
+    for (let i = 0; i < totalLength; i++) {
+      sumSq += samples[i] * samples[i];
+    }
+    const loud = totalLength > 0 && Math.sqrt(sumSq / totalLength) > LOUDNESS_THRESHOLD;
+    const wav = encodeWav(samples, sampleRate);
+
+    return { wav, duration, loud };
+  };
+
+  return { stop };
 }
 
-function encodeWav(buffer: AudioBuffer): { wav: Blob; loud: boolean } {
-  const channels: Float32Array[] = [];
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    channels.push(buffer.getChannelData(c));
-  }
-
-  const length = buffer.length;
-  const pcm = new Int16Array(length);
-  let sumSq = 0;
-  for (let i = 0; i < length; i++) {
-    let s = 0;
-    for (let c = 0; c < channels.length; c++) s += channels[c][i];
-    s /= channels.length;
-    if (s > 1) s = 1;
-    else if (s < -1) s = -1;
-    pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-    sumSq += s * s;
-  }
-  const loud = Math.sqrt(sumSq / length) > LOUDNESS_THRESHOLD;
-
-  const sampleRate = buffer.sampleRate;
+function encodeWav(samples: Float32Array, sampleRate: number): Blob {
+  const length = samples.length;
   const numChannels = 1;
   const bytesPerSample = 2;
   const dataSize = length * numChannels * bytesPerSample;
   const buf = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buf);
 
-  const writeStr = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  const writeStr = (off: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
   };
 
   writeStr(0, "RIFF");
   view.setUint32(4, 36 + dataSize, true);
   writeStr(8, "WAVE");
   writeStr(12, "fmt ");
-  view.setUint32(16, 16, true); // fmt chunk size
-  view.setUint16(20, 1, true); // PCM
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); // byte rate
-  view.setUint16(32, numChannels * bytesPerSample, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
+  view.setUint32(28, sampleRate * numChannels * bytesPerSample, true);
+  view.setUint16(32, numChannels * bytesPerSample, true);
+  view.setUint16(34, 16, true);
   writeStr(36, "data");
   view.setUint32(40, dataSize, true);
-  for (let i = 0; i < length; i++) view.setInt16(44 + i * 2, pcm[i], true);
 
-  return { wav: new Blob([buf], { type: "audio/wav" }), loud };
+  for (let i = 0; i < length; i++) {
+    let s = samples[i];
+    if (s > 1) s = 1;
+    else if (s < -1) s = -1;
+    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+
+  return new Blob([buf], { type: "audio/wav" });
 }
