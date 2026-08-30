@@ -32,6 +32,8 @@ class Step:
     write: Tuple[str, ...] = ()              # path into session.answers (empty for sex)
     gate: Optional[Tuple[Tuple[str, ...], bool]] = None  # (path, truthy) -> skip when unmet
     female_only: bool = False
+    section_id: str = ""                     # section letter "A".."E" ("" for the sex pre-step)
+    question_n: int = 0                      # 1-based top-level question number (0 for sex)
 
 
 def humanize(key: str) -> str:
@@ -69,10 +71,12 @@ def _build_steps() -> Tuple[list, dict]:
 
     for section in SCHEMA["sections"]:
         title = section["title"]
+        section_id = section["id"]
         for q in section["questions"]:
             key = q["key"]
             qtype = q["type"]
             qid = f"q{q['n']}"
+            question_n = q["n"]
             options = tuple(q.get("options", []))
 
             if qtype == "table":
@@ -89,6 +93,7 @@ def _build_steps() -> Tuple[list, dict]:
                         steps.append(Step(
                             rid, row["type"], humanize(rkey), title,
                             options=tuple(row.get("options", [])), write=write,
+                            section_id=section_id, question_n=question_n,
                         ))
                         f = row.get("followup")
                         if f:
@@ -98,6 +103,7 @@ def _build_steps() -> Tuple[list, dict]:
                                 options=tuple(f.get("options", [])),
                                 write=("habits", rkey, fkey),
                                 gate=(("habits", rkey, "value"), True),
+                                section_id=section_id, question_n=question_n,
                             ))
                 else:
                     # products / procedures: rows are display strings, columns given
@@ -109,6 +115,7 @@ def _build_steps() -> Tuple[list, dict]:
                         steps.append(Step(
                             f"{rid}.{first['key']}", first["type"], row_label, title,
                             write=(key, row_label, first["key"]),
+                            section_id=section_id, question_n=question_n,
                         ))
                         for col in columns[1:]:
                             ckey = col["key"]
@@ -118,11 +125,13 @@ def _build_steps() -> Tuple[list, dict]:
                                 options=tuple(col.get("options", [])),
                                 write=(key, row_label, ckey),
                                 gate=((key, row_label, gate_col), True),
+                                section_id=section_id, question_n=question_n,
                             ))
             else:
                 steps.append(Step(
                     qid, qtype, humanize(key), title, options=options,
                     write=(key,), female_only=bool(q.get("femaleOnly", False)),
+                    section_id=section_id, question_n=question_n,
                 ))
                 f = q.get("followup")
                 if f:
@@ -130,6 +139,7 @@ def _build_steps() -> Tuple[list, dict]:
                     steps.append(Step(
                         f"{qid}.{fkey}", f["type"], humanize(fkey), title,
                         write=(fkey,), gate=((key,), True),
+                        section_id=section_id, question_n=question_n,
                     ))
 
     return steps, {s.id: s for s in steps}

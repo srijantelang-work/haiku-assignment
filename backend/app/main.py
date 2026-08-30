@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -11,6 +12,15 @@ from . import engine, store
 from .schema import STEPS_BY_ID, TOTAL_QUESTIONS
 
 app = FastAPI(title="Haiku Studio Intake — State Machine API", version="0.1.0")
+
+# The React shell (Phase 2+) runs on a different origin during dev (Vite :5173).
+# Allow all origins for now; tighten to the deployed frontend origin in Phase 4.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class AnswerRequest(BaseModel):

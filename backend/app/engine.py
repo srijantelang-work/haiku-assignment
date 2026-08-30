@@ -213,6 +213,8 @@ def question_view(step: Step, answers: dict, sex: Any) -> dict:
         "type": step.kind,
         "label": step.label,
         "section": step.section,
+        "section_id": step.section_id,
+        "question_n": step.question_n,
     }
     if step.options:
         view["options"] = list(step.options)

@@ -24,8 +24,13 @@ Returns `session_id` + the first question (the `sex` tap).
 
 ```bash
 curl -s -X POST localhost:8000/session
-# {"session_id":"...","question":{"step":"sex","type":"single","label":"Sex","section":"About you","options":["female","male"],"progress":{"completed":0,"total":16}}}
+# {"session_id":"...","question":{"step":"sex","type":"single","label":"Sex","section":"About you","section_id":"","question_n":0,"options":["female","male"],"progress":{"completed":0,"total":16}}}
 ```
+
+Each question also carries `section_id` (`"A"`–`"E"`) and `question_n` (1–16) so
+the frontend progress rail can show section dots and "Q N of 16" without parsing
+step ids. CORS is open (`allow_origins=["*"]`) so the React shell can call from
+its own dev origin.
 
 ### `GET /session/{id}` — current state
 Returns the current question, all answers so far, and progress (`N of 16`).
