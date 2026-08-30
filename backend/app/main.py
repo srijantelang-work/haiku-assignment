@@ -1,14 +1,14 @@
-"""FastAPI app: the four Phase-1 endpoints over the in-memory session store."""
+"""FastAPI app: the Phase-1 endpoints over the in-memory session store."""
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from . import engine, store
+from . import engine, stt, store
 from .schema import STEPS_BY_ID, TOTAL_QUESTIONS
 
 app = FastAPI(title="Haiku Studio Intake — State Machine API", version="0.1.0")
@@ -64,6 +64,25 @@ def answer(session_id: str, req: AnswerRequest) -> dict:
         "next_question": next_question,
         "done": next_question is None,
     }
+
+
+@app.post("/transcribe")
+async def transcribe(request: Request) -> dict:
+    """Speech-to-text for the frontend's press-to-talk mic.
+
+    Reads the raw audio bytes directly from the body (no multipart parser, so
+    the deployment doesn't need python-multipart). The API key is handled only
+    here in `stt`, never in the browser.
+    """
+    audio = await request.body()
+    content_type = request.headers.get("content-type", "audio/webm")
+    if not audio:
+        raise HTTPException(status_code=400, detail="no audio received")
+    try:
+        text = await stt.transcribe_audio(audio, content_type)
+    except stt.STTError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return {"text": text}
 
 
 @app.get("/session/{session_id}/export")

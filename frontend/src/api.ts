@@ -39,3 +39,19 @@ export function exportSession(sessionId: string): Promise<Record<string, unknown
 export function exportSummary(sessionId: string): Promise<SummaryResponse> {
   return request<SummaryResponse>(`/session/${sessionId}/summary`);
 }
+
+// Speech-to-text (Phase 5). Posts the raw audio blob to the backend, which is
+// the only place that holds the ElevenLabs key — it never touches the browser.
+export async function transcribe(audio: Blob): Promise<string> {
+  const res = await fetch(`${BASE}/transcribe`, {
+    method: "POST",
+    headers: { "Content-Type": audio.type || "audio/webm" },
+    body: audio,
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = body && body.detail ? body.detail : res.statusText;
+    throw new Error(typeof detail === "string" ? detail : "Transcription failed");
+  }
+  return (body as { text: string }).text;
+}

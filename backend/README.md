@@ -17,6 +17,16 @@ python3 -m uvicorn app.main:app --reload
 # → http://127.0.0.1:8000  (docs at /docs)
 ```
 
+Voice input (Phase 5) needs an ElevenLabs key. Copy it into `backend/.env`
+(gitignored — never commit it):
+
+```bash
+ELEVENLABS_API_KEY=sk_...
+```
+
+The key is read by `app/stt.py` and used **only** server-side; it is never sent
+to the browser.
+
 ## Endpoints
 
 ### `POST /session` — create a session
@@ -56,6 +66,21 @@ Same data as `/export`, grouped by section with human labels and formatted
 values (`"Yes"`/`"No"`, `"Not applicable"` for skips, table rows flattened to
 lines). The frontend summary screen renders this directly.
 
+### `POST /transcribe` — speech-to-text (Phase 5)
+Takes the raw audio bytes as the request body (any `content-type`; the frontend
+sends `audio/webm` or `audio/mp4`) and returns `{"text": "…"}` from ElevenLabs
+Scribe v2. No multipart parser — the body is read directly, so the deploy
+doesn't need `python-multipart`. The `xi-api-key` lives only in `app/stt.py`.
+
+Error mapping (the UI shows these, then offers retry):
+
+| case | status |
+|---|---|
+| empty body | `400` no audio received |
+| silence / no speech | `422` no speech detected |
+| upstream STT failure | `502` |
+| missing key | `503` |
+
 ## Answer shapes
 
 | type | value |
@@ -92,3 +117,6 @@ python -m pytest -q
 Covers: full female run (hits Q6/Q7), full male run (auto-skips Q6/Q7),
 smoking-yes → severity follow-up, smoking-no → skip, product/procedure gating,
 export-before-complete `409`, invalid-option `422`, and key-mismatch `409`.
+
+`tests/test_stt.py` covers the `/transcribe` endpoint with the ElevenLabs call
+monkeypatched, so the suite never consumes credits or needs network access.

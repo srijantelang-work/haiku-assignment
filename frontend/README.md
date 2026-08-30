@@ -46,6 +46,9 @@ VITE_API_BASE=https://your-api.example npm run build
   completed intake (renders the `/summary` payload; skips show "Not applicable").
 - `src/components/questions/*` — one component per type, all built on a shared
   `ChoiceChip` (large thumb-reachable tap target with a check indicator).
+- `src/components/MicButton.tsx` — press-to-talk voice input (Phase 5). Records
+  while held, POSTs the clip to the backend `/transcribe` endpoint on release,
+  and hands the transcript back. The ElevenLabs key never reaches the browser.
 
 ## Interaction model
 
@@ -61,6 +64,12 @@ VITE_API_BASE=https://your-api.example npm run build
   the sex tap is framed "So we can skip what doesn't apply to you", and
   follow-ups (smoking → severity, salon → detail, Q14 → describe) render with a
   "Follow-up" pill as an inline continuation — the rail number does not move.
+- **Voice (Phase 5)** is press-to-talk: hold the mic, speak, release. On the
+  free-text questions the transcript drops into the textarea for review; on
+  tap questions an "or just say your answer" row matches the spoken option to a
+  chip (yes/no, single, multi). Silence and service errors surface inline with
+  a retry — no hard crash. The mic hides itself on browsers without
+  `getUserMedia`/`MediaRecorder`, and needs HTTPS on non-localhost origins.
 
 ## Back button
 
