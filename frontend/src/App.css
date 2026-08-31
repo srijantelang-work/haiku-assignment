@@ -1,5 +1,5 @@
 :root {
-  /* --- Clinical Luxury Color Palette --- */
+  /* --- Clinical Luxury Light Palette --- */
   --bg: #F9F8F6;
   --bg-gradient: radial-gradient(circle at 50% 0%, #EAF2EF 0%, #F9F8F6 75%);
   --card: #FFFFFF;
@@ -43,6 +43,36 @@
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+[data-theme="dark"] {
+  /* --- Obsidian & Luminous Emerald Dark Palette --- */
+  --bg: #0B0F0E;
+  --bg-gradient: radial-gradient(circle at 50% 0%, #13221E 0%, #0B0F0E 75%);
+  --card: #131A18;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+  
+  --ink: #F2F6F5;
+  --ink-secondary: #9DB0AB;
+  --muted: #6B7E78;
+  --line: #222D29;
+  --line-light: #18211E;
+
+  --accent: #10B981;
+  --accent-hover: #059669;
+  --accent-soft: rgba(16, 185, 129, 0.15);
+  --accent-soft-hover: rgba(16, 185, 129, 0.22);
+  --accent-glow: rgba(16, 185, 129, 0.25);
+
+  --voice-accent: #A78BFA;
+  --voice-soft: rgba(167, 139, 250, 0.16);
+  --voice-glow: rgba(167, 139, 250, 0.3);
+
+  --danger: #F87171;
+  --danger-soft: rgba(248, 113, 113, 0.15);
+  --success: #34D399;
+  --success-soft: rgba(52, 211, 153, 0.15);
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -65,6 +95,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
   letter-spacing: -0.01em;
+  transition: background-color 0.3s var(--ease-smooth), color 0.3s var(--ease-smooth);
 }
 
 /* --- Layout Container --- */
@@ -121,6 +152,12 @@ body {
   letter-spacing: 0.02em;
 }
 
+.clinic-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .clinic-secure-tag {
   font-size: 11px;
   font-weight: 600;
@@ -128,6 +165,108 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* --- Sun & Moon Theme Switcher (from lightdark.md) --- */
+
+.theme-switch-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+.theme-switch {
+  font-size: 11px;
+  position: relative;
+  display: inline-block;
+  width: 3.8em;
+  height: 2.1em;
+  border-radius: 30px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.theme-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #1a2421;
+  border: 1px solid var(--card-border);
+  transition: 0.4s var(--ease-spring);
+  border-radius: 30px;
+  overflow: hidden;
+}
+
+.theme-slider:before {
+  position: absolute;
+  content: "";
+  height: 1.2em;
+  width: 1.2em;
+  border-radius: 20px;
+  left: 0.45em;
+  bottom: 0.4em;
+  transition: 0.4s var(--ease-spring);
+  box-shadow: inset 7px -3px 0px 0px #ffffff;
+}
+
+.theme-switch input:checked + .theme-slider {
+  background-color: #0d483f;
+}
+
+.theme-switch input:checked + .theme-slider:before {
+  transform: translateX(1.7em);
+  box-shadow: inset 15px -4px 0px 15px #ffcf48;
+}
+
+.theme-star {
+  background-color: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  transition: all 0.4s;
+}
+
+.theme-star_1 {
+  left: 2.3em;
+  top: 0.5em;
+}
+
+.theme-star_2 {
+  left: 2.0em;
+  top: 1.1em;
+}
+
+.theme-star_3 {
+  left: 2.7em;
+  top: 0.9em;
+}
+
+.theme-switch input:checked + .theme-slider .theme-star {
+  opacity: 0;
+}
+
+.theme-cloud {
+  width: 3.2em;
+  position: absolute;
+  bottom: -1.3em;
+  left: -0.9em;
+  opacity: 0;
+  transition: all 0.4s;
+}
+
+.theme-switch input:checked + .theme-slider .theme-cloud {
+  opacity: 1;
 }
 
 /* --- Card Container --- */
@@ -144,7 +283,7 @@ body {
   flex-direction: column;
   gap: 20px;
   position: relative;
-  transition: transform 0.2s var(--ease-smooth), box-shadow 0.2s var(--ease-smooth);
+  transition: transform 0.2s var(--ease-smooth), box-shadow 0.2s var(--ease-smooth), background-color 0.3s var(--ease-smooth);
 }
 
 @media (max-width: 480px) {
@@ -350,7 +489,7 @@ body {
   font-weight: 500;
   text-align: left;
   color: var(--ink);
-  background: #ffffff;
+  background: var(--card);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -392,7 +531,7 @@ body {
   flex: 0 0 22px;
   border-radius: 50%;
   border: 1.5px solid var(--line);
-  background: #ffffff;
+  background: var(--card);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -456,7 +595,7 @@ body {
   height: 56px;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--line);
-  background: #ffffff;
+  background: var(--card);
   color: var(--ink);
   font-size: 24px;
   font-weight: 600;
@@ -499,6 +638,7 @@ body {
   border: 1.5px solid var(--line);
   border-radius: var(--radius-md);
   color: var(--accent);
+  background: var(--card);
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -548,7 +688,7 @@ body {
   font-family: inherit;
   border: 1px solid var(--line);
   border-radius: var(--radius-full);
-  background: #ffffff;
+  background: var(--card);
   color: var(--ink);
   cursor: pointer;
   transition: all 0.15s var(--ease-spring);
@@ -573,7 +713,7 @@ textarea {
   padding: 14px 18px;
   border: 1.5px solid var(--line);
   border-radius: var(--radius-md);
-  background: #ffffff;
+  background: var(--card);
   color: var(--ink);
   font-family: inherit;
   outline: none;
@@ -729,7 +869,7 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   color: var(--accent);
-  background: #ffffff;
+  background: var(--card);
   border: 1.5px solid var(--line);
   cursor: pointer;
   touch-action: none;
@@ -943,7 +1083,7 @@ textarea.prefilled {
 }
 
 .tab-btn.active {
-  background: #ffffff;
+  background: var(--card);
   color: var(--ink);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
@@ -974,7 +1114,7 @@ textarea.prefilled {
   padding: 5px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: #ffffff;
+  background: var(--card);
   color: var(--accent);
   cursor: pointer;
   transition: all 0.15s;
@@ -1104,8 +1244,9 @@ textarea.prefilled {
 .review-json {
   margin: 0;
   padding: 16px;
-  background: #18221F;
+  background: #080C0B;
   color: #E2ECE8;
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   font-size: 12px;
   line-height: 1.5;
@@ -1285,7 +1426,8 @@ textarea.prefilled {
   .tab-btn,
   .copy-btn,
   .print-btn,
-  .ghost {
+  .ghost,
+  .theme-switch-wrapper {
     display: none;
   }
 }

@@ -3,6 +3,7 @@ import ProgressRail from "./components/ProgressRail";
 import QuestionRouter from "./components/QuestionRouter";
 import Review from "./components/Review";
 import Summary from "./components/Summary";
+import ThemeSwitch from "./components/ThemeSwitch";
 import {
   createSession,
   editSession,
@@ -20,15 +21,24 @@ import type { Question, ReviewItem, ReviewResponse, SummaryResponse } from "./ty
 type Status = "loading" | "ready" | "review" | "submitted" | "fatal";
 
 const STORAGE_KEY = "haiku_session_id";
+const THEME_STORAGE_KEY = "haiku_theme";
 
-function ClinicHeader() {
+interface ClinicHeaderProps {
+  isDark: boolean;
+  onToggleTheme: () => void;
+}
+
+function ClinicHeader({ isDark, onToggleTheme }: ClinicHeaderProps) {
   return (
     <header className="clinic-header">
       <div className="clinic-brand">
         <span className="clinic-logo-mark">HAIKU</span>
         <span className="clinic-subtitle">Hair & Scalp Clinic</span>
       </div>
-      <span className="clinic-secure-tag">🔒 Confidential</span>
+      <div className="clinic-actions">
+        <span className="clinic-secure-tag">🔒 Confidential</span>
+        <ThemeSwitch isDark={isDark} onToggle={onToggleTheme} />
+      </div>
     </header>
   );
 }
@@ -43,6 +53,23 @@ export default function App() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [review, setReview] = useState<ReviewResponse | null>(null);
   const [editing, setEditing] = useState<ReviewItem | null>(null);
+
+  // Theme Management
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved) return saved === "dark";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  });
+
+  useEffect(() => {
+    const theme = isDark ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [isDark]);
+
+  const toggleTheme = useCallback(() => {
+    setIsDark((prev) => !prev);
+  }, []);
 
   const initNewSession = useCallback(() => {
     createSession()
@@ -199,7 +226,7 @@ export default function App() {
     return (
       <div className="screen">
         <div className="card" style={{ alignItems: "center", textAlign: "center", padding: "48px 24px" }}>
-          <ClinicHeader />
+          <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
           <div className="mic-spinner" style={{ width: 28, height: 28, borderColor: "var(--line)", borderTopColor: "var(--accent)" }} />
           <p className="muted" style={{ margin: "8px 0 0" }}>Resuming your hair & scalp intake…</p>
         </div>
@@ -211,7 +238,7 @@ export default function App() {
     return (
       <div className="screen">
         <div className="card">
-          <ClinicHeader />
+          <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
           <p className="error">{error}</p>
           <p className="muted">Make sure the backend is running on :8000, then try again.</p>
           <button className="primary" onClick={restart}>
@@ -238,7 +265,7 @@ export default function App() {
       return (
         <div className="screen">
           <div className="card">
-            <ClinicHeader />
+            <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
             <div className="body">
               <p className="section-label">Review · Edit</p>
               <h2 className="question-label">{editing.label}</h2>
@@ -261,7 +288,7 @@ export default function App() {
       return (
         <div className="screen">
           <div className="card" style={{ alignItems: "center", textAlign: "center", padding: "40px 20px" }}>
-            <ClinicHeader />
+            <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
             <div className="mic-spinner" style={{ width: 28, height: 28, borderColor: "var(--line)", borderTopColor: "var(--accent)" }} />
             <p className="muted" style={{ margin: "8px 0 0" }}>Preparing your consultation summary…</p>
             {error && <p className="error">{error}</p>}
@@ -272,7 +299,7 @@ export default function App() {
     return (
       <div className="screen">
         <div className="card">
-          <ClinicHeader />
+          <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
           <Review review={review} onEdit={handleEdit} onSubmit={handleSubmit} />
           <div className="footer" style={{ marginTop: 8 }}>
             <button
@@ -294,7 +321,7 @@ export default function App() {
     return (
       <div className="screen">
         <div className="card done-card">
-          <ClinicHeader />
+          <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
           <div className="check">✓</div>
           <h1>Intake Submitted</h1>
           <p className="muted">Your consultation profile has been delivered directly to your specialist.</p>
@@ -317,7 +344,7 @@ export default function App() {
   return (
     <div className="screen">
       <div className="card">
-        <ClinicHeader />
+        <ClinicHeader isDark={isDark} onToggleTheme={toggleTheme} />
         <ProgressRail question={question} />
         {question && (
           <div className="body" key={question.step}>
