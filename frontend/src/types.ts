@@ -18,11 +18,28 @@ export interface SessionResponse {
   question: Question;
 }
 
+export interface SessionDetailResponse {
+  session_id: string;
+  done: boolean;
+  current_question: Question | null;
+  answers: Record<string, unknown>;
+  meta: Record<string, unknown>;
+  progress: { completed: number; total: number };
+  can_go_back?: boolean;
+}
+
 export interface AnswerResponse {
   session_id: string;
   answered: { key: string };
   next_question: Question | null;
   done: boolean;
+  can_go_back?: boolean;
+}
+
+export interface BackResponse {
+  session_id: string;
+  question: Question;
+  can_go_back: boolean;
 }
 
 export interface StructureResult {

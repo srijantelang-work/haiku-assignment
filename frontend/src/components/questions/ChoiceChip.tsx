@@ -17,9 +17,24 @@ export default function ChoiceChip({ label, selected, prefilled, disabled, big, 
       aria-pressed={selected}
     >
       <span className="chip-dot" aria-hidden="true">
-        {selected ? "✓" : ""}
+        {selected ? (
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
+            <path
+              d="M3.5 8.5L6.5 11.5L12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : null}
       </span>
-      {label}
+      <span className="chip-label-text">{label}</span>
+      {prefilled && (
+        <span className="prefilled-sparkle-tag" title="Auto-filled from speech">
+          ✨ Suggested
+        </span>
+      )}
     </button>
   );
 }

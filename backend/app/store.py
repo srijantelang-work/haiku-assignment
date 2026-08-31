@@ -14,6 +14,7 @@ class Session:
     done: bool = False
     answers: dict = field(default_factory=dict)
     meta: dict = field(default_factory=dict)
+    history: list = field(default_factory=list)
 
     def __post_init__(self):
         self.meta.setdefault("started_at", datetime.now(timezone.utc).isoformat())

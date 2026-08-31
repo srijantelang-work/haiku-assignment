@@ -28,6 +28,10 @@ export function createSession(): Promise<SessionResponse> {
   return request<SessionResponse>("/session", { method: "POST" });
 }
 
+export function getSession(sessionId: string): Promise<SessionDetailResponse> {
+  return request<SessionDetailResponse>(`/session/${sessionId}`);
+}
+
 export function submitAnswer(
   sessionId: string,
   key: string,
@@ -37,6 +41,13 @@ export function submitAnswer(
     method: "POST",
     body: JSON.stringify({ key, value }),
   });
+}
+
+export function stepBack(sessionId: string): Promise<{ session_id: string; question: Question; can_go_back: boolean }> {
+  return request<{ session_id: string; question: Question; can_go_back: boolean }>(
+    `/session/${sessionId}/back`,
+    { method: "POST" }
+  );
 }
 
 export function exportSession(sessionId: string): Promise<Record<string, unknown>> {

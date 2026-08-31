@@ -65,13 +65,33 @@ def answer(session_id: str, req: AnswerRequest) -> dict:
         engine.apply_answer(session, step, req.value)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    session.history.append(session.current_step)
     next_question = engine.advance(session)
     return {
         "session_id": session_id,
         "answered": {"key": step.id},
         "next_question": next_question,
         "done": next_question is None,
+        "can_go_back": len(session.history) > 0,
     }
+
+
+@app.post("/session/{session_id}/back")
+def back(session_id: str) -> dict:
+    session = _require(session_id)
+    if not session.history:
+        raise HTTPException(status_code=400, detail="cannot go back from initial question")
+    prev_step_id = session.history.pop()
+    session.current_step = prev_step_id
+    session.done = False
+    step = STEPS_BY_ID[prev_step_id]
+    q = engine.question_view(step, session.answers, session.meta.get("sex"))
+    return {
+        "session_id": session_id,
+        "question": q,
+        "can_go_back": len(session.history) > 0,
+    }
+
 
 
 @app.post("/session/{session_id}/structure")

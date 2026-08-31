@@ -374,4 +374,5 @@ def session_view(session) -> dict:
             "completed": completed_count(session.answers, session.meta.get("sex")),
             "total": TOTAL_QUESTIONS,
         },
+        "can_go_back": len(session.history) > 0,
     }
