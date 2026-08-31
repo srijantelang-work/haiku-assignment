@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
 
-SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "intake-schema.json"
+_POSSIBLE_SCHEMA_PATHS = [
+    Path(__file__).resolve().parent.parent.parent / "intake-schema.json",
+    Path(__file__).resolve().parent.parent / "intake-schema.json",
+    Path(__file__).resolve().parent / "intake-schema.json",
+    Path("intake-schema.json"),
+]
+SCHEMA_PATH = next((p for p in _POSSIBLE_SCHEMA_PATHS if p.exists()), _POSSIBLE_SCHEMA_PATHS[0])
 
 EXCLUSIVE_OPTIONS = {"No known family history", "None"}
 
