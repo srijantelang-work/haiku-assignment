@@ -1,0 +1,12 @@
+node_modules
+frontend
+Plans
+dist
+.git
+.gitignore
+.env
+.env.*
+*.log
+.DS_Store
+__pycache__
+*.pyc
