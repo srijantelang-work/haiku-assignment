@@ -18,6 +18,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const detail = (body && (body.detail || body.message)) || res.statusText;
     throw new Error(typeof detail === "string" ? detail : "Request failed");
   }
+  if (body === null) {
+    throw new Error("Invalid or empty server response");
+  }
   return body as T;
 }
 

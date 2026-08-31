@@ -6,11 +6,9 @@ export default function TextQuestion({ question, onAnswer, submitting, structure
   const [value, setValue] = useState("");
   const [prefilled, setPrefilled] = useState(false);
   const [structuring, setStructuring] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
 
   const onTranscript = async (text: string) => {
     setStructuring(true);
-    setVoiceError(null);
     try {
       const r = await structureTranscript(question.step, text);
       const cleaned = (r && typeof r.value === "string" && r.value.trim()) ? r.value.trim() : text.trim();
@@ -41,7 +39,6 @@ export default function TextQuestion({ question, onAnswer, submitting, structure
       )}
       <MicButton onTranscript={onTranscript} disabled={submitting || structuring} />
       {structuring && <span className="voice-status">Formatting your answer…</span>}
-      {voiceError && <span className="voice-error">{voiceError}</span>}
       <button
         className="primary"
         disabled={!value.trim() || submitting}

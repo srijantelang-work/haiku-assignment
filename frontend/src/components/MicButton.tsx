@@ -47,6 +47,12 @@ export default function MicButton({ onTranscript, disabled }: MicButtonProps) {
   const deliver = async (clip: { wav: Blob; duration: number; loud: boolean }) => {
     setPhase("transcribing");
     try {
+      if (clip.duration < 0.25) {
+        // Accidental tap or instant release: reset to idle cleanly
+        setPhase("idle");
+        setError(null);
+        return;
+      }
       if (clip.duration < MIN_DURATION) {
         setPhase("error");
         setError("That clip was too short — hold the mic and speak a little longer.");

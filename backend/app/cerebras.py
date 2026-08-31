@@ -3,27 +3,10 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 
 import httpx
 
-_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
-
-
-def _load_env() -> None:
-    if not _ENV_PATH.exists():
-        return
-    for line in _ENV_PATH.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip('"').strip("'").rstrip(",")
-        os.environ[key] = value
-
-
-_load_env()
+from .env import load_env
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 MODEL = "gpt-oss-120b"
@@ -38,7 +21,7 @@ class StructuringError(Exception):
 def api_key() -> str:
     key = os.environ.get("CEREBRAS_API_KEY", "").strip()
     if not key:
-        _load_env()
+        load_env()
         key = os.environ.get("CEREBRAS_API_KEY", "").strip()
     return key
 
